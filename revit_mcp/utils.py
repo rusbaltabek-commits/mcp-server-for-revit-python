@@ -35,6 +35,19 @@ def normalize_string(text):
         return u"Unnamed"
 
 
+def feet_to_meters(value):
+    """Convert a length from Revit's internal units (decimal feet) to meters.
+
+    Revit 2021+ exposes DB.UnitTypeId.Meters; older versions only have the
+    deprecated DB.DisplayUnitType.DUT_METERS. Try the modern API first and
+    fall back for compatibility with pre-2021 Revit.
+    """
+    try:
+        return DB.UnitUtils.ConvertFromInternalUnits(value, DB.UnitTypeId.Meters)
+    except AttributeError:
+        return DB.UnitUtils.ConvertFromInternalUnits(value, DB.DisplayUnitType.DUT_METERS)
+
+
 def element_id_value(element_id):
     """Get the integer value from an ElementId.
 

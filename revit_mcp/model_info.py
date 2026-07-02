@@ -9,7 +9,7 @@ from pyrevit.revit.db import ProjectInfo as RevitProjectInfo
 import pyrevit.revit.db.query as q
 import logging
 
-from utils import normalize_string, get_element_name
+from utils import normalize_string, get_element_name, feet_to_meters
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def register_model_info_routes(api):
                 for level in levels_collector:
                     level_name = get_element_name(level)
                     try:
-                        elevation = level.Elevation
+                        elevation = feet_to_meters(level.Elevation)
                         levels_info.append(
                             {
                                 "name": normalize_string(level_name),
