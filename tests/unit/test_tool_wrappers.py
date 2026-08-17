@@ -8,6 +8,12 @@ from tools.view_tools import register_view_tools
 from tools.family_tools import register_family_tools
 from tools.colors_tools import register_colors_tools
 from tools.code_execution_tools import register_code_execution_tools
+from tools.selection_tools import register_selection_tools
+from tools.element_tools import register_element_tools
+from tools.creation_tools import register_creation_tools
+from tools.building_tools import register_building_tools
+from tools.material_tools import register_material_tools
+from tools.curtain_wall_tools import register_curtain_wall_tools
 
 
 # ---- Status tools ----
@@ -223,3 +229,274 @@ class TestCodeExecutionTools:
             code="print(1)", ctx=None
         )
         assert "Error during code execution" in result
+
+
+# ---- Selection tools ----
+
+class TestSelectionTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_get):
+        mock_revit_get.return_value = {"status": "success", "elements": []}
+        register_selection_tools(mock_mcp, mock_revit_get)
+        self.tools = mock_mcp.tools
+        self.mock_get = mock_revit_get
+
+    async def test_get_selected_elements(self):
+        await self.tools["get_selected_elements"](ctx=None)
+        self.mock_get.assert_called_once_with("/selected_elements/", None)
+
+
+# ---- Element management tools ----
+
+class TestElementTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_get, mock_revit_post):
+        mock_revit_post.return_value = {"status": "success"}
+        register_element_tools(mock_mcp, mock_revit_get, mock_revit_post)
+        self.tools = mock_mcp.tools
+        self.mock_post = mock_revit_post
+
+    async def test_modify_element(self):
+        await self.tools["modify_element"](
+            element_id=123, parameters={"Comments": "hi"}, ctx=None
+        )
+        self.mock_post.assert_called_once_with(
+            "/modify_element/",
+            {"element_id": 123, "parameters": {"Comments": "hi"}},
+            None,
+        )
+
+    async def test_delete_elements(self):
+        await self.tools["delete_elements"](element_ids=[1, 2, 3], ctx=None)
+        self.mock_post.assert_called_once_with(
+            "/delete_elements/", {"element_ids": [1, 2, 3]}, None
+        )
+
+
+# ---- Creation tools ----
+
+class TestCreationTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_post):
+        mock_revit_post.return_value = {"status": "success"}
+        register_creation_tools(mock_mcp, mock_revit_post)
+        self.tools = mock_mcp.tools
+        self.mock_post = mock_revit_post
+
+    async def test_create_line_based_element_default(self):
+        await self.tools["create_line_based_element"](
+            start_x=0.0, start_y=0.0, end_x=5.0, end_y=0.0,
+            level_name="Level 1", ctx=None,
+        )
+        call_data = self.mock_post.call_args[0][1]
+        assert call_data["category"] == "wall"
+        assert call_data["start"] == {"x": 0.0, "y": 0.0}
+        assert call_data["end"] == {"x": 5.0, "y": 0.0}
+        assert call_data["level_name"] == "Level 1"
+        assert call_data["properties"] == {}
+
+    async def test_create_surface_based_element_default(self):
+        boundary = [
+            {"x": 0.0, "y": 0.0}, {"x": 5.0, "y": 0.0},
+            {"x": 5.0, "y": 5.0}, {"x": 0.0, "y": 5.0},
+        ]
+        await self.tools["create_surface_based_element"](
+            boundary=boundary, level_name="Level 1", ctx=None,
+        )
+        call_data = self.mock_post.call_args[0][1]
+        assert call_data["category"] == "floor"
+        assert call_data["boundary"] == boundary
+        assert call_data["level_name"] == "Level 1"
+
+
+# ---- Building generator tool ----
+
+class TestBuildingTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_post):
+        mock_revit_post.return_value = {"status": "success"}
+        register_building_tools(mock_mcp, mock_revit_post)
+        self.tools = mock_mcp.tools
+        self.mock_post = mock_revit_post
+
+    async def test_generate_building_minimal(self):
+        levels = [{"name": "Level 1", "elevation": 0.0}]
+        await self.tools["generate_building"](levels=levels, ctx=None)
+        self.mock_post.assert_called_once_with(
+            "/generate_building/",
+            {
+                "levels": levels,
+                "walls": [],
+                "openings": [],
+                "floors": [],
+                "roofs": [],
+                "rooms": [],
+            },
+            None,
+        )
+
+    async def test_generate_building_full(self):
+        levels = [{"name": "Level 1", "elevation": 0.0}]
+        walls = [
+            {
+                "id": "W1",
+                "level": "Level 1",
+                "start": {"x": 0.0, "y": 0.0},
+                "end": {"x": 6.0, "y": 0.0},
+                "height": 3.0,
+                "type_name": "Generic - 200mm",
+            }
+        ]
+        openings = [
+            {
+                "host_wall": "W1",
+                "kind": "door",
+                "distance_along_wall": 1.5,
+                "family_name": "Single-Flush",
+                "type_name": "0915 x 2134mm",
+            }
+        ]
+        floors = [
+            {
+                "level": "Level 1",
+                "type_name": "Generic 150mm",
+                "boundary": [
+                    {"x": 0, "y": 0}, {"x": 6, "y": 0},
+                    {"x": 6, "y": 4}, {"x": 0, "y": 4},
+                ],
+            }
+        ]
+        roofs = [
+            {
+                "level": "Level 1",
+                "type_name": "Generic - 400mm",
+                "boundary": [
+                    {"x": 0, "y": 0}, {"x": 6, "y": 0},
+                    {"x": 6, "y": 4}, {"x": 0, "y": 4},
+                ],
+            }
+        ]
+        rooms = [{"level": "Level 1", "name": "Гостиная", "point": {"x": 3.0, "y": 2.0}}]
+
+        await self.tools["generate_building"](
+            levels=levels,
+            walls=walls,
+            openings=openings,
+            floors=floors,
+            roofs=roofs,
+            rooms=rooms,
+            ctx=None,
+        )
+        call_data = self.mock_post.call_args[0][1]
+        assert call_data["walls"] == walls
+        assert call_data["openings"] == openings
+        assert call_data["floors"] == floors
+        assert call_data["roofs"] == roofs
+        assert call_data["rooms"] == rooms
+
+
+# ---- Material tools ----
+
+class TestMaterialTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_post):
+        mock_revit_post.return_value = {"status": "success"}
+        register_material_tools(mock_mcp, mock_revit_post)
+        self.tools = mock_mcp.tools
+        self.mock_post = mock_revit_post
+
+    async def test_create_material_name_only(self):
+        await self.tools["create_material"](name="Кирпич красный", ctx=None)
+        self.mock_post.assert_called_once_with(
+            "/create_material/", {"name": "Кирпич красный"}, None
+        )
+
+    async def test_create_material_with_color_and_transparency(self):
+        await self.tools["create_material"](
+            name="Glass - Blue Tint",
+            color_rgb=[120, 160, 200],
+            transparency=70,
+            ctx=None,
+        )
+        call_data = self.mock_post.call_args[0][1]
+        assert call_data["color_rgb"] == [120, 160, 200]
+        assert call_data["transparency"] == 70
+
+    async def test_set_compound_layer_material_default_layer(self):
+        await self.tools["set_compound_layer_material"](
+            category="wall",
+            type_name="Generic - 200mm",
+            material_name="Кирпич красный",
+            ctx=None,
+        )
+        self.mock_post.assert_called_once_with(
+            "/set_compound_layer_material/",
+            {
+                "category": "wall",
+                "type_name": "Generic - 200mm",
+                "material_name": "Кирпич красный",
+                "layer_index": 0,
+            },
+            None,
+        )
+
+
+# ---- Curtain wall tools ----
+
+class TestCurtainWallTools:
+    @pytest.fixture(autouse=True)
+    def setup(self, mock_mcp, mock_revit_post):
+        mock_revit_post.return_value = {"status": "success"}
+        register_curtain_wall_tools(mock_mcp, mock_revit_post)
+        self.tools = mock_mcp.tools
+        self.mock_post = mock_revit_post
+
+    async def test_set_curtain_wall_grid_fixed_distance(self):
+        await self.tools["set_curtain_wall_grid"](
+            type_name="Storefront",
+            direction="vertical",
+            layout="fixed_distance",
+            spacing=1.5,
+            ctx=None,
+        )
+        self.mock_post.assert_called_once_with(
+            "/set_curtain_wall_grid/",
+            {
+                "type_name": "Storefront",
+                "direction": "vertical",
+                "layout": "fixed_distance",
+                "spacing": 1.5,
+            },
+            None,
+        )
+
+    async def test_set_curtain_wall_grid_fixed_number(self):
+        await self.tools["set_curtain_wall_grid"](
+            type_name="Storefront",
+            direction="horizontal",
+            layout="fixed_number",
+            number=4,
+            ctx=None,
+        )
+        call_data = self.mock_post.call_args[0][1]
+        assert call_data["number"] == 4
+        assert "spacing" not in call_data
+
+    async def test_set_curtain_wall_mullions(self):
+        await self.tools["set_curtain_wall_mullions"](
+            type_name="Storefront",
+            mullion_type_name="Rectangular Mullion 1.5\" x 2.5\"",
+            position="interior",
+            direction="vertical",
+            ctx=None,
+        )
+        self.mock_post.assert_called_once_with(
+            "/set_curtain_wall_mullions/",
+            {
+                "type_name": "Storefront",
+                "mullion_type_name": "Rectangular Mullion 1.5\" x 2.5\"",
+                "position": "interior",
+                "direction": "vertical",
+            },
+            None,
+        )

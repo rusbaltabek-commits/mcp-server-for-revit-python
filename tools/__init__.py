@@ -13,6 +13,12 @@ def register_tools(mcp_server, revit_get_func, revit_post_func, revit_image_func
     from .code_execution_tools import register_code_execution_tools
     from .launch_tools import register_launch_tools
     from .document_tools import register_document_tools
+    from .selection_tools import register_selection_tools
+    from .element_tools import register_element_tools
+    from .creation_tools import register_creation_tools
+    from .building_tools import register_building_tools
+    from .material_tools import register_material_tools
+    from .curtain_wall_tools import register_curtain_wall_tools
 
     # Register tools from each module
     register_status_tools(mcp_server, revit_get_func)
@@ -25,3 +31,9 @@ def register_tools(mcp_server, revit_get_func, revit_post_func, revit_image_func
     )
     register_launch_tools(mcp_server, revit_get_func)
     register_document_tools(mcp_server, revit_get_func, revit_post_func)
+    register_selection_tools(mcp_server, revit_get_func)
+    register_element_tools(mcp_server, revit_get_func, revit_post_func)
+    register_creation_tools(mcp_server, revit_post_func)
+    register_building_tools(mcp_server, revit_post_func)
+    register_material_tools(mcp_server, revit_post_func)
+    register_curtain_wall_tools(mcp_server, revit_post_func)

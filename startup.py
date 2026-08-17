@@ -45,6 +45,30 @@ def register_routes():
 
         register_document_routes(api)
 
+        from revit_mcp.selection import register_selection_routes
+
+        register_selection_routes(api)
+
+        from revit_mcp.elements import register_element_routes
+
+        register_element_routes(api)
+
+        from revit_mcp.creation import register_creation_routes
+
+        register_creation_routes(api)
+
+        from revit_mcp.building import register_building_routes
+
+        register_building_routes(api)
+
+        from revit_mcp.materials import register_material_routes
+
+        register_material_routes(api)
+
+        from revit_mcp.curtain_walls import register_curtain_wall_routes
+
+        register_curtain_wall_routes(api)
+
         logger.info("All MCP routes registered successfully")
 
     except Exception as e:

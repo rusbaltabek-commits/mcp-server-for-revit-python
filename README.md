@@ -97,11 +97,16 @@ They never conflict because they serve different roles, speak different protocol
 | `close_document` | ✅ Implemented | Launch & Document | Close the active document |
 | `save_document` | ✅ Implemented | Launch & Document | Save or Save As the active document |
 | `sync_with_central` | ✅ Implemented | Launch & Document | Synchronize a workshared document with central |
-| `get_selected_elements` | 🔄 Pending | Selection Management | Get information about currently selected elements |
-| `create_line_based_element` | 🔄 Pending | Element Creation | Create line-based elements (walls, beams, pipes) |
-| `create_surface_based_element` | 🔄 Pending | Element Creation | Create surface-based elements (floors, ceilings) |
-| `delete_elements` | 🔄 Pending | Element Management | Delete specified elements from the model |
-| `modify_element` | 🔄 Pending | Element Management | Modify element properties (instance parameters) |
+| `get_selected_elements` | ✅ Implemented | Selection Management | Get information about currently selected elements |
+| `create_line_based_element` | ✅ Implemented | Element Creation | Create line-based elements (currently: walls) |
+| `create_surface_based_element` | ✅ Implemented | Element Creation | Create surface-based elements (currently: floors) |
+| `generate_building` | ✅ Implemented | Element Creation | Generate a whole building (levels, walls, doors/windows, floors, roofs, rooms) from one JSON payload in a single transaction |
+| `delete_elements` | ✅ Implemented | Element Management | Delete specified elements from the model |
+| `modify_element` | ✅ Implemented | Element Management | Modify element properties (instance parameters) |
+| `create_material` | ✅ Implemented | Materials | Find-or-create a material, optionally with color/transparency |
+| `set_compound_layer_material` | ✅ Implemented | Materials | Apply a material to a wall/floor/roof type's compound layer |
+| `set_curtain_wall_grid` | ✅ Implemented | Facades | Set automatic grid layout/spacing on a curtain-wall type |
+| `set_curtain_wall_mullions` | ✅ Implemented | Facades | Set the automatic mullion profile on a curtain-wall type |
 | `reset_model` | 🔄 Pending | Element Management | Reset model by deleting process model elements |
 | `tag_walls` | 🔄 Pending | Annotation | Tag all walls in the current view |
 | `search_modules` | 🔄 Pending | Integration | Search for available modules/addins |
